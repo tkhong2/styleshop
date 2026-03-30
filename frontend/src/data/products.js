@@ -1,0 +1,13 @@
+// Re-export từ API hoặc dùng mock data cho admin dashboard
+export const products = [
+  { id: 1, name: "Áo Thun Basic Cotton Trắng", price: 299000, original_price: 299000, category: "ao", gender: "unisex", image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80", rating: 4.5, reviews: 312, is_new: false, is_sale: false },
+  { id: 2, name: "Áo Thun Oversize Unisex", price: 349000, original_price: 399000, category: "ao", gender: "unisex", image: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=500&q=80", rating: 4.7, reviews: 528, is_new: true, is_sale: true },
+  { id: 3, name: "Quần Jeans Slim Fit Nam", price: 599000, original_price: 599000, category: "quan", gender: "nam", image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=500&q=80", rating: 4.7, reviews: 489, is_new: true, is_sale: false },
+  { id: 4, name: "Váy Hoa Nhí Dáng Xòe", price: 449000, original_price: 549000, category: "vay", gender: "nu", image: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=500&q=80", rating: 4.8, reviews: 534, is_new: true, is_sale: true },
+  { id: 5, name: "Áo Khoác Bomber Unisex", price: 849000, original_price: 1049000, category: "ao", gender: "unisex", image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500&q=80", rating: 4.6, reviews: 378, is_new: false, is_sale: true },
+  { id: 6, name: "Đầm Maxi Boho Dài", price: 679000, original_price: 779000, category: "vay", gender: "nu", image: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=500&q=80", rating: 4.9, reviews: 423, is_new: true, is_sale: true },
+  { id: 7, name: "Hoodie Oversize Nữ", price: 549000, original_price: 549000, category: "ao", gender: "nu", image: "https://images.unsplash.com/photo-1556821840-3a63f15732ce?w=500&q=80", rating: 4.8, reviews: 567, is_new: true, is_sale: false },
+  { id: 8, name: "Quần Jeans Wide Leg Nữ", price: 679000, original_price: 799000, category: "quan", gender: "nu", image: "https://images.unsplash.com/photo-1555689502-c4b22d76c56f?w=500&q=80", rating: 4.8, reviews: 423, is_new: true, is_sale: true },
+  { id: 9, name: "Áo Len Cổ Lọ Nữ", price: 549000, original_price: 649000, category: "ao", gender: "nu", image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500&q=80", rating: 4.8, reviews: 334, is_new: true, is_sale: true },
+  { id: 10, name: "Giày Sneaker Trắng Unisex", price: 799000, original_price: 999000, category: "giay", gender: "unisex", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80", rating: 4.7, reviews: 567, is_new: false, is_sale: true },
+]
