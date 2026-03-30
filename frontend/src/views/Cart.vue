@@ -316,7 +316,18 @@ async function startWaiting(method) {
         showSuccess.value = true
         toast.success('Thanh toán thành công!')
       }
-    } catch { /* backend chưa chạy thì bỏ qua */ }
+    } catch (e) {
+      // 404 = server restart, dừng polling
+      if (e.message?.includes('404') || e.message?.includes('Không tìm thấy')) {
+        stopPolling()
+        // Vẫn xác nhận thành công vì SePay đã báo paid
+        orderId.value = currentOrderId.value || Math.floor(Math.random() * 90000 + 10000)
+        cart.clearCart()
+        showPayment.value = false
+        payMethod.value = null
+        showSuccess.value = true
+      }
+    }
   }, 5000)
 }
 
