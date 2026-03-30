@@ -1,0 +1,1 @@
+import{a as e}from"./api-DQirqeQO.js";const a={create(r){return e.post("/orders",r)},getMyOrders(r=null){const t=r?{user_id:r}:{};return e.get("/orders/me",{params:t})},getPaymentStatus(r){return e.get(`/orders/${r}/payment-status`)}};export{a as o};

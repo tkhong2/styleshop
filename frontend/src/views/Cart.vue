@@ -74,7 +74,7 @@
 
           <!-- Method selector -->
           <div v-if="!payMethod" class="pay-methods">
-            <button class="pay-method-btn" @click="payMethod = 'qr'">
+            <button class="pay-method-btn" @click="selectMethod('qr')">
               <div class="pay-icon bank-icon"><i class="fas fa-university"></i></div>
               <div>
                 <p class="pay-name">Chuyển khoản ngân hàng</p>
@@ -82,7 +82,7 @@
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
-            <button class="pay-method-btn" @click="payMethod = 'momo'">
+            <button class="pay-method-btn" @click="selectMethod('momo')">
               <div class="pay-icon momo-icon"><i class="fas fa-wallet"></i></div>
               <div>
                 <p class="pay-name">Ví MoMo</p>
@@ -166,8 +166,43 @@
             <div class="cod-icon-big"><i class="fas fa-hand-holding-usd"></i></div>
             <h3>Thanh toán khi nhận hàng</h3>
             <p>Bạn sẽ thanh toán <strong>{{ formatPrice(finalTotal) }}</strong> khi nhận được hàng.</p>
-            <p class="cod-note">Shipper sẽ liên hệ trước khi giao. Vui lòng chuẩn bị đúng số tiền.</p>
-            <button class="btn btn-dark confirm-btn" @click="confirmPayment('cod')">
+
+            <!-- Shipping form -->
+            <div class="shipping-form">
+              <h4><i class="fas fa-map-marker-alt"></i> Thông tin giao hàng</h4>
+              <div class="form-row">
+                <div class="field">
+                  <label>Họ tên *</label>
+                  <input v-model="shipping.name" type="text" placeholder="Nguyễn Văn A" required />
+                </div>
+                <div class="field">
+                  <label>Số điện thoại *</label>
+                  <input v-model="shipping.phone" type="tel" placeholder="0912 345 678" required />
+                </div>
+              </div>
+              <div class="field">
+                <label>Địa chỉ *</label>
+                <input v-model="shipping.address" type="text" placeholder="Số nhà, tên đường" required />
+              </div>
+              <div class="form-row">
+                <div class="field">
+                  <label>Quận/Huyện</label>
+                  <input v-model="shipping.district" type="text" placeholder="Quận 1" />
+                </div>
+                <div class="field">
+                  <label>Tỉnh/Thành phố</label>
+                  <input v-model="shipping.city" type="text" placeholder="TP. Hồ Chí Minh" />
+                </div>
+              </div>
+              <div class="field">
+                <label>Ghi chú</label>
+                <textarea v-model="shipping.note" placeholder="Ghi chú cho shipper..." rows="2"></textarea>
+              </div>
+            </div>
+
+            <p class="cod-note"><i class="fas fa-info-circle"></i> Shipper sẽ liên hệ trước khi giao. Vui lòng chuẩn bị đúng số tiền.</p>
+            <button class="btn btn-dark confirm-btn" @click="confirmPayment('cod')"
+              :disabled="!shipping.name || !shipping.phone || !shipping.address">
               Xác nhận đặt hàng COD
             </button>
           </div>
@@ -210,6 +245,14 @@ const showPayment = ref(false)
 const showSuccess = ref(false)
 const payMethod = ref(null)
 const orderId = ref('')
+const shipping = ref({
+  name: auth.user?.name || '',
+  phone: '',
+  address: '',
+  district: '',
+  city: '',
+  note: '',
+})
 
 // Polling state
 const waitingPayment = ref(false)
@@ -263,6 +306,7 @@ async function confirmPayment(method) {
       coupon: coupon.value || null,
       payment_method: method,
       user_id: auth.user?.email || null,
+      shipping: { ...shipping.value },
     })
     orderId.value = order.id
   } catch {
@@ -274,12 +318,14 @@ async function confirmPayment(method) {
   showSuccess.value = true
 }
 
-// ── Bank/MoMo: tạo đơn → polling chờ webhook ────────────────────────────────
-async function startWaiting(method) {
-  // Tạo đơn hàng trước
-  let order
+// Chọn phương thức → chỉ set payMethod, chưa tạo đơn
+async function selectMethod(method) {
+  payMethod.value = method
+  // Tạo đơn với timestamp mới mỗi lần mở QR
+  currentOrderId.value = null
+  currentTransferNote.value = ''
   try {
-    order = await orderService.create({
+    const order = await orderService.create({
       items: cart.items.map(i => ({ product_id: i.id, size: i.size, color: i.color, quantity: i.quantity })),
       total: finalTotal.value,
       coupon: coupon.value || null,
@@ -289,8 +335,28 @@ async function startWaiting(method) {
     currentOrderId.value = order.id
     currentTransferNote.value = order.transfer_note || transferNote.value
   } catch {
-    currentOrderId.value = null
     currentTransferNote.value = transferNote.value
+  }
+}
+
+// ── Bank/MoMo: bắt đầu polling sau khi user đã chuyển ────────────────────────
+async function startWaiting(method) {
+  // Đơn đã được tạo trong selectMethod, chỉ cần bắt đầu polling
+  if (!currentOrderId.value) {
+    // Fallback nếu chưa tạo
+    try {
+      const order = await orderService.create({
+        items: cart.items.map(i => ({ product_id: i.id, size: i.size, color: i.color, quantity: i.quantity })),
+        total: finalTotal.value,
+        coupon: coupon.value || null,
+        payment_method: method,
+        user_id: auth.user?.email || null,
+      })
+      currentOrderId.value = order.id
+      currentTransferNote.value = order.transfer_note || transferNote.value
+    } catch {
+      currentTransferNote.value = transferNote.value
+    }
   }
 
   waitingPayment.value = true
@@ -304,12 +370,30 @@ async function startWaiting(method) {
 
   // Polling mỗi 5 giây
   pollTimer = setInterval(async () => {
-    if (!currentOrderId.value) return
     try {
-      const res = await orderService.getPaymentStatus(currentOrderId.value)
-      if (res.payment_status === 'paid') {
+      // Check đơn hiện tại
+      if (currentOrderId.value) {
+        const res = await orderService.getPaymentStatus(currentOrderId.value)
+        if (res.payment_status === 'paid') {
+          stopPolling()
+          orderId.value = currentOrderId.value
+          cart.clearCart()
+          showPayment.value = false
+          payMethod.value = null
+          showSuccess.value = true
+          toast.success('Thanh toán thành công!')
+          return
+        }
+      }
+      // Fallback: check đơn hiện tại của user có paid không
+      const allOrders = await orderService.getMyOrders(auth.user?.email)
+      // Chỉ check đơn được tạo trong session này (currentOrderId)
+      const paidOrder = allOrders.find(o =>
+        o.id === currentOrderId.value && o.payment_status === 'paid'
+      )
+      if (paidOrder) {
         stopPolling()
-        orderId.value = currentOrderId.value
+        orderId.value = paidOrder.id
         cart.clearCart()
         showPayment.value = false
         payMethod.value = null
@@ -317,10 +401,8 @@ async function startWaiting(method) {
         toast.success('Thanh toán thành công!')
       }
     } catch (e) {
-      // 404 = server restart, dừng polling
-      if (e.message?.includes('404') || e.message?.includes('Không tìm thấy')) {
+      if (e.message?.includes('404')) {
         stopPolling()
-        // Vẫn xác nhận thành công vì SePay đã báo paid
         orderId.value = currentOrderId.value || Math.floor(Math.random() * 90000 + 10000)
         cart.clearCart()
         showPayment.value = false
@@ -334,6 +416,8 @@ async function startWaiting(method) {
 function cancelWaiting() {
   stopPolling()
   payMethod.value = null
+  currentOrderId.value = null
+  currentTransferNote.value = ''
 }
 
 function stopPolling() {
@@ -387,7 +471,10 @@ onUnmounted(() => stopPolling())
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px; }
 .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--gray2); }
+@media (max-width: 480px) {
+  .modal { border-radius: 16px 16px 0 0; max-height: 95vh; margin-top: auto; }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+}.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--gray2); }
 .modal-header h2 { font-size: 17px; font-weight: 700; }
 .close-btn { background: none; color: #888; padding: 4px; }
 
@@ -423,12 +510,19 @@ onUnmounted(() => stopPolling())
 .confirm-btn { width: 100%; padding: 14px; font-size: 14px; margin-top: 8px; }
 
 /* COD */
-.pay-cod { padding: 32px 24px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.pay-cod { padding: 20px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .cod-icon { font-size: 56px; }
-.cod-icon-big { width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; color: #166534; display: flex; align-items: center; justify-content: center; font-size: 28px; }
-.pay-cod h3 { font-size: 18px; font-weight: 700; }
-.pay-cod p { font-size: 14px; color: #555; line-height: 1.6; }
-.cod-note { font-size: 13px; color: var(--gray3); background: var(--gray); padding: 12px; border-radius: 8px; width: 100%; }
+.cod-icon-big { width: 56px; height: 56px; border-radius: 50%; background: #dcfce7; color: #166534; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.pay-cod h3 { font-size: 17px; font-weight: 700; }
+.pay-cod > p { font-size: 14px; color: #555; }
+.cod-note { font-size: 12px; color: var(--gray3); background: var(--gray); padding: 10px 14px; border-radius: 8px; width: 100%; text-align: left; display: flex; align-items: center; gap: 6px; }
+.shipping-form { width: 100%; background: #f8fafc; border-radius: 10px; padding: 16px; text-align: left; }
+.shipping-form h4 { font-size: 13px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; color: #1e293b; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.shipping-form .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.shipping-form label { font-size: 12px; font-weight: 600; color: #475569; }
+.shipping-form input, .shipping-form textarea { padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: var(--font); outline: none; resize: none; }
+.shipping-form input:focus, .shipping-form textarea:focus { border-color: var(--black); }
 
 /* Success */
 .success-modal { padding: 48px 32px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
@@ -452,5 +546,20 @@ onUnmounted(() => stopPolling())
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
-@media (max-width: 600px) { .item { grid-template-columns: 72px 1fr; } .qty, .subtotal, .remove { grid-column: 2; } }
+@media (max-width: 600px) {
+  .cart-page { padding: 16px 14px 100px; }
+  .cart-page h1 { font-size: 22px; margin-bottom: 20px; }
+  .item { grid-template-columns: 72px 1fr; gap: 10px; padding: 12px; }
+  .item img { width: 72px; height: 72px; }
+  .qty, .subtotal, .remove { grid-column: 2; }
+  .subtotal { font-size: 13px; min-width: unset; text-align: left; }
+  .summary { padding: 16px; }
+  .checkout-btn { padding: 14px; }
+  /* Payment modal full screen on mobile */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal { border-radius: 20px 20px 0 0; max-height: 92vh; max-width: 100%; }
+  .pay-qr { padding: 16px 18px; }
+  .qr-img { width: 180px; height: 180px; }
+  .shipping-form .form-row { grid-template-columns: 1fr; }
+}
 </style>

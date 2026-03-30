@@ -62,9 +62,29 @@
           </div>
 
           <div class="meta">
-            <p>Danh mục: <span>{{ product.category }}</span></p>
-            <p>Miễn phí vận chuyển cho đơn từ 500.000đ</p>
+            <p><i class="fas fa-tag"></i> Danh mục: <span>{{ product.category }}</span></p>
+            <p><i class="fas fa-truck"></i> Miễn phí vận chuyển cho đơn từ 500.000đ</p>
+            <p><i class="fas fa-undo"></i> Đổi trả trong vòng 30 ngày</p>
           </div>
+
+          <!-- Share -->
+          <div class="share-row">
+            <span class="share-label"><i class="fas fa-share-alt"></i> Chia sẻ:</span>
+            <a :href="`https://www.facebook.com/sharer/sharer.php?u=${pageUrl}`" target="_blank" class="share-btn fb">
+              <i class="fab fa-facebook-f"></i>
+            </a>
+            <button class="share-btn copy" @click="copyLink">
+              <i class="fas fa-link"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Related products -->
+      <div v-if="relatedProducts.length > 0" class="related-section">
+        <h2 class="related-title">Sản phẩm liên quan</h2>
+        <div class="related-grid">
+          <ProductCard v-for="p in relatedProducts" :key="p.id" :product="p" />
         </div>
       </div>
     </template>
@@ -72,19 +92,23 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useProduct } from '@/composables/useProducts.js'
+import { useProduct, useProducts } from '@/composables/useProducts.js'
 import { useCartStore } from '@/stores/cart.js'
 import { useWishlistStore } from '@/stores/wishlist.js'
 import { useToastStore } from '@/stores/toast.js'
+import { useHistoryStore } from '@/stores/history.js'
+import ProductCard from '@/components/ProductCard.vue'
 import { formatPrice, discountPercent } from '@/utils/format.js'
 
 const route = useRoute()
 const cart = useCartStore()
 const wishlist = useWishlistStore()
 const toast = useToastStore()
+const history = useHistoryStore()
 const { product, loading, error, fetchProduct } = useProduct()
+const { products: allProducts, fetchProducts } = useProducts()
 
 const activeImage = ref('')
 const selectedSize = ref('')
@@ -98,7 +122,20 @@ watch(product, (p) => {
   }
 }, { immediate: true })
 
-watch(() => route.params.id, (id) => fetchProduct(id), { immediate: true })
+watch(() => route.params.id, (id) => {
+  fetchProduct(id)
+  if (allProducts.value.length === 0) fetchProducts()
+}, { immediate: true })
+
+// Lưu lịch sử xem
+watch(product, (p) => { if (p) history.add(p) })
+
+const relatedProducts = computed(() => {
+  if (!product.value) return []
+  return allProducts.value
+    .filter(p => p.id !== product.value.id && p.category === product.value.category)
+    .slice(0, 4)
+})
 
 function addToCart() {
   if (!selectedSize.value || !selectedColor.value) return
@@ -109,6 +146,13 @@ function addToCart() {
 function toggleWish() {
   const added = wishlist.toggle(product.value)
   toast[added ? 'success' : 'info'](added ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích')
+}
+
+const pageUrl = computed(() => typeof window !== 'undefined' ? window.location.href : '')
+
+function copyLink() {
+  navigator.clipboard.writeText(pageUrl.value)
+  toast.success('Đã copy link sản phẩm!')
 }
 </script>
 
@@ -148,7 +192,27 @@ function toggleWish() {
 .wish-toggle:hover { border-color: var(--red); color: var(--red); }
 .wish-toggle.active { border-color: var(--red); color: var(--red); background: #fff5f5; }
 .wish-toggle.active svg { fill: var(--red); }
-.meta { font-size: 13px; color: #888; display: flex; flex-direction: column; gap: 6px; }
-.meta span { color: #1a1a1a; }
-@media (max-width: 768px) { .layout { grid-template-columns: 1fr; gap: 32px; } }
+.meta { font-size: 13px; color: #888; display: flex; flex-direction: column; gap: 8px; }
+.meta p { display: flex; align-items: center; gap: 8px; }
+.meta i { color: #3b82f6; width: 14px; }
+.meta span { color: #1a1a1a; font-weight: 500; }
+.share-row { display: flex; align-items: center; gap: 10px; }
+.share-label { font-size: 13px; color: #888; display: flex; align-items: center; gap: 6px; }
+.share-btn { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.2s; border: none; cursor: pointer; }
+.share-btn.fb { background: #1877f2; color: #fff; }
+.share-btn.fb:hover { background: #166fe5; }
+.share-btn.copy { background: #f1f5f9; color: #555; }
+.share-btn.copy:hover { background: #e2e8f0; }
+.related-section { margin-top: 60px; padding-top: 40px; border-top: 1px solid var(--gray2); }
+.related-title { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+.related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; gap: 24px; }
+  .related-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail-page { padding: 16px 16px 100px; }
+  .info h1 { font-size: 20px; }
+  .price { font-size: 22px; }
+  .add-btn { padding: 14px; font-size: 15px; }
+  .thumbs img { width: 56px; height: 56px; }
+}
 </style>

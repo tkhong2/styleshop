@@ -44,3 +44,40 @@ ul { list-style: none; }
 
 .badge-sale { background: var(--red); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 3px; }
 .badge-new { background: var(--black); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 3px; }
+
+/* ── Mobile optimizations ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Tăng touch target tối thiểu 44px */
+  button:not(.dot):not(.hero-arrow):not(.wish-btn):not(.collapse-btn):not(.eye-btn),
+  a { min-height: 44px; }
+
+  /* Font size tối thiểu 16px để tránh zoom trên iOS */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Container padding nhỏ hơn */
+  .container { padding: 0 14px; }
+
+  /* Section padding nhỏ hơn */
+  .section { padding: 32px 0; }
+
+  /* Products grid 2 cột */
+  .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+
+  /* Cart sidebar full width */
+  .sidebar { width: 100vw !important; }
+
+  /* Ẩn footer trên mobile (đã có bottom nav) */
+  footer { margin-bottom: 0; padding-bottom: 80px; }
+}
+
+@media (max-width: 380px) {
+  .products-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+  .container { padding: 0 10px; }
+}
+
+/* Safe area cho iPhone notch */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  footer { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+}

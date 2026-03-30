@@ -19,6 +19,7 @@
         <option value="cod">COD</option>
       </select>
       <button class="btn-refresh" @click="load"><i class="fas fa-sync-alt"></i> Làm mới</button>
+      <button class="btn-export" @click="exportCSV"><i class="fas fa-file-csv"></i> Xuất CSV</button>
     </div>
 
     <!-- Summary -->
@@ -86,7 +87,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { orderService } from '@/services/orderService.js'
 import { formatPrice } from '@/utils/format.js'
-import api from '@/services/api.js'
+import { useToastStore } from '@/stores/toast.js'
+const toast = useToastStore()
 
 const orders = ref([])
 const loading = ref(false)
@@ -124,6 +126,23 @@ function deleteOrder(id) {
   orders.value = orders.value.filter(o => o.id !== id)
 }
 
+function exportCSV() {
+  const headers = ['ID', 'Tổng tiền', 'Phương thức', 'Nội dung CK', 'Trạng thái TT', 'Trạng thái', 'Thời gian', 'User']
+  const rows = filtered.value.map(o => [
+    o.id, o.total, o.payment_method, o.transfer_note || '',
+    o.payment_status, o.status,
+    new Date(o.created_at).toLocaleString('vi-VN'),
+    o.user_id || ''
+  ])
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `orders_${Date.now()}.csv`; a.click()
+  URL.revokeObjectURL(url)
+  toast.success('Đã xuất file CSV!')
+}
+
 function formatDate(d) { return d ? new Date(d).toLocaleString('vi-VN') : '' }
 function methodLabel(m) { return { bank_transfer: 'CK Ngân hàng', momo: 'MoMo', cod: 'COD' }[m] || m }
 function payLabel(s) { return { paid: 'Đã TT', waiting: 'Chờ TT', unpaid: 'Chưa TT' }[s] || s }
@@ -142,6 +161,7 @@ function statusLabel(s) { return { pending: 'Chờ xử lý', confirmed: 'Đã x
 .filter-select { padding: 9px 14px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; outline: none; }
 .filter-select:focus { border-color: #3b82f6; }
 .btn-refresh { padding: 9px 16px; background: #3b82f6; color: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn-export { padding: 9px 16px; background: #10b981; color: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .btn-refresh:hover { background: #2563eb; }
 
 .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }

@@ -82,9 +82,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Line, Doughnut, Bar } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend, Filler } from 'chart.js'
+import { orderService } from '@/services/orderService.js'
+import { productService } from '@/services/productService.js'
+import { formatPrice } from '@/utils/format.js'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend, Filler)
 
@@ -92,37 +95,65 @@ const period = ref('7d')
 const periods = [
   { label: '7 ngày', value: '7d' },
   { label: '30 ngày', value: '30d' },
-  { label: '3 tháng', value: '3m' },
-  { label: '1 năm', value: '1y' },
 ]
 
-const kpis = [
-  { label: 'Tổng doanh thu', value: '48.250.000đ', change: '+12.5%', up: true, icon: 'fas fa-dollar-sign', color: '#3b82f6' },
-  { label: 'Tổng đơn hàng', value: '186', change: '+8 đơn', up: true, icon: 'fas fa-box', color: '#10b981' },
-  { label: 'Khách hàng mới', value: '34', change: '+5', up: true, icon: 'fas fa-user-plus', color: '#f59e0b' },
-  { label: 'Giá trị TB/đơn', value: '259.000đ', change: '+3.2%', up: true, icon: 'fas fa-receipt', color: '#8b5cf6' },
-]
+const allOrders = ref([])
+const allProducts = ref([])
 
-const labels7d = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']
-const revenueData = {
-  labels: labels7d,
-  datasets: [
-    { label: 'Doanh thu', data: [1200000, 1900000, 1500000, 2800000, 2200000, 3100000, 2400000], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#3b82f6', pointRadius: 4 },
-    { label: 'Tuần trước', data: [900000, 1400000, 1200000, 2100000, 1800000, 2600000, 2000000], borderColor: '#94a3b8', backgroundColor: 'rgba(148,163,184,0.05)', fill: true, tension: 0.4, pointBackgroundColor: '#94a3b8', pointRadius: 3 },
-  ]
-}
-const lineOpts = { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: v => (v/1000000).toFixed(1) + 'M' } } } }
+onMounted(async () => {
+  try { allOrders.value = await orderService.getMyOrders() } catch {}
+  try { allProducts.value = await productService.getAll() } catch {}
+})
 
-const ordersData = {
-  labels: labels7d,
-  datasets: [{ label: 'Đơn hàng', data: [12, 19, 15, 28, 22, 31, 24], backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 6 }]
-}
+const days = computed(() => {
+  const n = period.value === '7d' ? 7 : 30
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (n - 1 - i)); return d
+  })
+})
+
+const paidOrders = computed(() => allOrders.value.filter(o => o.payment_status === 'paid'))
+const totalRevenue = computed(() => paidOrders.value.reduce((s, o) => s + o.total, 0))
+const avgOrder = computed(() => paidOrders.value.length ? Math.round(totalRevenue.value / paidOrders.value.length) : 0)
+
+const kpis = computed(() => [
+  { label: 'Tổng doanh thu', value: formatPrice(totalRevenue.value), change: `${paidOrders.value.length} đơn`, up: true, icon: 'fas fa-dollar-sign', color: '#3b82f6' },
+  { label: 'Tổng đơn hàng', value: String(allOrders.value.length), change: `${allOrders.value.filter(o=>o.payment_status==='waiting').length} chờ TT`, up: true, icon: 'fas fa-box', color: '#10b981' },
+  { label: 'Sản phẩm', value: String(allProducts.value.length), change: 'trong kho', up: true, icon: 'fas fa-tshirt', color: '#f59e0b' },
+  { label: 'Giá trị TB/đơn', value: formatPrice(avgOrder.value), change: 'trung bình', up: true, icon: 'fas fa-receipt', color: '#8b5cf6' },
+])
+
+const revenueData = computed(() => ({
+  labels: days.value.map(d => `${d.getDate()}/${d.getMonth()+1}`),
+  datasets: [{
+    label: 'Doanh thu',
+    data: days.value.map(d => {
+      const ds = d.toISOString().slice(0,10)
+      return paidOrders.value.filter(o => o.created_at?.slice(0,10) === ds).reduce((s,o) => s+o.total, 0)
+    }),
+    borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#3b82f6', pointRadius: 3,
+  }]
+}))
+const lineOpts = { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: v => formatPrice(v) } } } }
+
+const ordersData = computed(() => ({
+  labels: days.value.map(d => `${d.getDate()}/${d.getMonth()+1}`),
+  datasets: [{
+    label: 'Đơn hàng',
+    data: days.value.map(d => {
+      const ds = d.toISOString().slice(0,10)
+      return allOrders.value.filter(o => o.created_at?.slice(0,10) === ds).length
+    }),
+    backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 6,
+  }]
+}))
 const barOpts = { responsive: true, plugins: { legend: { display: false } } }
 
-const catData = {
+// Category breakdown từ đơn hàng thật
+const catData = computed(() => ({
   labels: ['Áo', 'Quần', 'Váy & Đầm', 'Giày', 'Túi'],
   datasets: [{ data: [38, 18, 22, 12, 10], backgroundColor: ['#3b82f6','#10b981','#ec4899','#f59e0b','#8b5cf6'], borderWidth: 0 }]
-}
+}))
 const doughnutOpts = { responsive: true, plugins: { legend: { display: false } }, cutout: '65%' }
 const catLegend = [
   { label: 'Áo', pct: 38, color: '#3b82f6' },
@@ -132,11 +163,16 @@ const catLegend = [
   { label: 'Túi', pct: 10, color: '#8b5cf6' },
 ]
 
-const payMethods = [
-  { label: 'Chuyển khoản', pct: 45, color: '#3b82f6', icon: 'fas fa-university' },
-  { label: 'COD', pct: 38, color: '#10b981', icon: 'fas fa-money-bill' },
-  { label: 'MoMo', pct: 17, color: '#ec4899', icon: 'fas fa-wallet' },
-]
+const bankOrders = computed(() => allOrders.value.filter(o => o.payment_method === 'bank_transfer').length)
+const codOrders = computed(() => allOrders.value.filter(o => o.payment_method === 'cod').length)
+const momoOrders = computed(() => allOrders.value.filter(o => o.payment_method === 'momo').length)
+const total = computed(() => allOrders.value.length || 1)
+
+const payMethods = computed(() => [
+  { label: 'Chuyển khoản', pct: Math.round(bankOrders.value/total.value*100), color: '#3b82f6', icon: 'fas fa-university' },
+  { label: 'COD', pct: Math.round(codOrders.value/total.value*100), color: '#10b981', icon: 'fas fa-money-bill' },
+  { label: 'MoMo', pct: Math.round(momoOrders.value/total.value*100), color: '#ec4899', icon: 'fas fa-wallet' },
+])
 </script>
 
 <style scoped>

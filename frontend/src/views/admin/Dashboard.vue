@@ -90,8 +90,7 @@
         <div class="card-header"><h3><i class="fas fa-chart-pie"></i> Trạng thái đơn hàng</h3></div>
         <Doughnut :data="doughnutData" :options="doughnutOptions" />
         <div class="legend">
-          <div v-for="(item, i) in legendItems" :key="i" class="legend-item">
-            <span class="legend-dot" :style="{ background: item.color }"></span>
+          <div v-for="(item, i) in legendItems" :key="i" class="legend-item">            <span class="legend-dot" :style="{ background: item.color }"></span>
             <span>{{ item.label }}</span>
             <span class="legend-val">{{ item.value }}</span>
           </div>
@@ -122,53 +121,94 @@ import { ref, computed, onMounted } from 'vue'
 import { Line, Doughnut } from 'vue-chartjs'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler } from 'chart.js'
 import { orderService } from '@/services/orderService.js'
+import { productService } from '@/services/productService.js'
 import { formatPrice } from '@/utils/format.js'
-import { products } from '@/data/products.js'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler)
 
 const recentOrders = ref([])
+const allOrders = ref([])
+const allProducts = ref([])
+
 onMounted(async () => {
-  try { recentOrders.value = (await orderService.getMyOrders()).slice(0, 6) } catch {}
+  try {
+    allOrders.value = await orderService.getMyOrders()
+    recentOrders.value = allOrders.value.slice(0, 6)
+  } catch {}
+  try {
+    allProducts.value = await productService.getAll()
+  } catch {}
 })
 
-const stats = [
-  { label: 'Tổng doanh thu', value: '12.450.000đ', change: '+8.2%', up: true, icon: 'fas fa-dollar-sign', color: '#3b82f6', sparkline: '0,35 15,20 30,28 45,15 60,22 75,10 100,18' },
-  { label: 'Đơn hàng', value: '48', change: '+3 đơn', up: true, icon: 'fas fa-box', color: '#f59e0b', sparkline: '0,30 20,25 40,32 60,18 80,22 100,15' },
-  { label: 'Khách hàng', value: '124', change: '+12', up: true, icon: 'fas fa-users', color: '#10b981', sparkline: '0,38 25,28 50,32 75,20 100,25' },
-  { label: 'Tỷ lệ hoàn trả', value: '0.00%', change: '0%', up: true, icon: 'fas fa-undo', color: '#f43f5e', sparkline: '0,20 30,22 60,18 80,20 100,19' },
-]
+// Stats từ dữ liệu thật
+const totalRevenue = computed(() =>
+  allOrders.value.filter(o => o.payment_status === 'paid').reduce((s, o) => s + o.total, 0)
+)
+const totalOrders = computed(() => allOrders.value.length)
+const paidOrders = computed(() => allOrders.value.filter(o => o.payment_status === 'paid').length)
+const waitingOrders = computed(() => allOrders.value.filter(o => o.payment_status === 'waiting').length)
+const codOrders = computed(() => allOrders.value.filter(o => o.payment_method === 'cod').length)
 
-const chartData = {
-  labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
-  datasets: [
-    { label: 'Tuần này', data: [1200000, 1900000, 1500000, 2800000, 2200000, 3100000, 2400000], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#3b82f6', pointRadius: 4 },
-    { label: 'Tuần trước', data: [900000, 1400000, 1200000, 2100000, 1800000, 2600000, 2000000], borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.05)', fill: true, tension: 0.4, pointBackgroundColor: '#f59e0b', pointRadius: 4 },
-  ]
-}
-const chartOptions = { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: v => (v/1000000).toFixed(1) + 'M' } } } }
+const stats = computed(() => [
+  { label: 'Tổng doanh thu', value: formatPrice(totalRevenue.value), change: `${paidOrders.value} đơn paid`, up: true, icon: 'fas fa-dollar-sign', color: '#3b82f6', sparkline: '0,35 15,20 30,28 45,15 60,22 75,10 100,18' },
+  { label: 'Đơn hàng', value: String(totalOrders.value), change: `${paidOrders.value} đã TT`, up: true, icon: 'fas fa-box', color: '#f59e0b', sparkline: '0,30 20,25 40,32 60,18 80,22 100,15' },
+  { label: 'Sản phẩm', value: String(allProducts.value.length), change: 'trong kho', up: true, icon: 'fas fa-tshirt', color: '#10b981', sparkline: '0,38 25,28 50,32 75,20 100,25' },
+  { label: 'Chờ thanh toán', value: String(waitingOrders.value), change: 'đơn pending', up: waitingOrders.value === 0, icon: 'fas fa-clock', color: '#f43f5e', sparkline: '0,20 30,22 60,18 80,20 100,19' },
+])
 
-const doughnutData = {
+// Chart doanh thu theo ngày (7 ngày gần nhất)
+const chartData = computed(() => {
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - (6 - i))
+    return d
+  })
+  const labels = days.map(d => ['CN','T2','T3','T4','T5','T6','T7'][d.getDay()])
+  const data = days.map(d => {
+    const dateStr = d.toISOString().slice(0, 10)
+    return allOrders.value
+      .filter(o => o.payment_status === 'paid' && o.created_at?.slice(0, 10) === dateStr)
+      .reduce((s, o) => s + o.total, 0)
+  })
+  return {
+    labels,
+    datasets: [{
+      label: 'Doanh thu',
+      data,
+      borderColor: '#3b82f6',
+      backgroundColor: 'rgba(59,130,246,0.1)',
+      fill: true, tension: 0.4,
+      pointBackgroundColor: '#3b82f6', pointRadius: 4,
+    }]
+  }
+})
+
+const chartOptions = { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { ticks: { callback: v => formatPrice(v) } } } }
+
+// Doughnut từ dữ liệu thật
+const doughnutData = computed(() => ({
   labels: ['Đã thanh toán', 'Chờ thanh toán', 'COD'],
-  datasets: [{ data: [18, 8, 22], backgroundColor: ['#10b981', '#f59e0b', '#3b82f6'], borderWidth: 0 }]
-}
+  datasets: [{ data: [paidOrders.value, waitingOrders.value, codOrders.value], backgroundColor: ['#10b981', '#f59e0b', '#3b82f6'], borderWidth: 0 }]
+}))
 const doughnutOptions = { responsive: true, plugins: { legend: { display: false } }, cutout: '70%' }
-const legendItems = [
-  { label: 'Đã thanh toán', value: 18, color: '#10b981' },
-  { label: 'Chờ thanh toán', value: 8, color: '#f59e0b' },
-  { label: 'COD', value: 22, color: '#3b82f6' },
-]
+const legendItems = computed(() => [
+  { label: 'Đã thanh toán', value: paidOrders.value, color: '#10b981' },
+  { label: 'Chờ thanh toán', value: waitingOrders.value, color: '#f59e0b' },
+  { label: 'COD', value: codOrders.value, color: '#3b82f6' },
+])
 
-const topProducts = computed(() => [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 5))
+// Top products từ API
+const topProducts = computed(() => [...allProducts.value].sort((a, b) => b.reviews - a.reviews).slice(0, 5))
 
-const quickStats = [
-  { icon: 'fas fa-box', label: 'Tổng đơn hàng', value: '48', color: '#3b82f6' },
-  { icon: 'fas fa-check-circle', label: 'Đã hoàn thành', value: '32', color: '#10b981' },
-  { icon: 'fas fa-spinner', label: 'Đang xử lý', value: '12', color: '#f59e0b' },
-  { icon: 'fas fa-times-circle', label: 'Đã huỷ', value: '4', color: '#ef4444' },
-  { icon: 'fas fa-tshirt', label: 'Sản phẩm', value: '100', color: '#8b5cf6' },
-  { icon: 'fas fa-users', label: 'Khách hàng', value: '124', color: '#06b6d4' },
-]
+// Quick stats thật
+const quickStats = computed(() => [
+  { icon: 'fas fa-box', label: 'Tổng đơn hàng', value: String(totalOrders.value), color: '#3b82f6' },
+  { icon: 'fas fa-check-circle', label: 'Đã thanh toán', value: String(paidOrders.value), color: '#10b981' },
+  { icon: 'fas fa-clock', label: 'Chờ thanh toán', value: String(waitingOrders.value), color: '#f59e0b' },
+  { icon: 'fas fa-money-bill', label: 'COD', value: String(codOrders.value), color: '#8b5cf6' },
+  { icon: 'fas fa-tshirt', label: 'Sản phẩm', value: String(allProducts.value.length), color: '#06b6d4' },
+  { icon: 'fas fa-dollar-sign', label: 'Doanh thu', value: formatPrice(totalRevenue.value), color: '#f43f5e' },
+])
 
 function statusLabel(s) { return { paid: 'Đã TT', waiting: 'Chờ TT', unpaid: 'Chưa TT' }[s] || s }
 function formatDate(d) { return d ? new Date(d).toLocaleString('vi-VN') : '' }

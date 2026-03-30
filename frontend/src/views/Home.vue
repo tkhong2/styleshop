@@ -40,7 +40,7 @@
           <RouterLink to="/products?sale=true" class="view-all">Xem tất cả →</RouterLink>
         </div>
         <div class="products-grid">
-          <ProductCard v-for="p in saleProducts" :key="p.id" :product="p" />
+          <ProductCard v-for="p in saleProducts" :key="p.id" :product="p" @quickview="openQuickView" />
         </div>
       </div>
     </section>
@@ -70,7 +70,7 @@
           <div v-for="i in 5" :key="i" class="skeleton-card"></div>
         </div>
         <div v-else class="products-grid">
-          <ProductCard v-for="p in newProducts" :key="p.id" :product="p" />
+          <ProductCard v-for="p in newProducts" :key="p.id" :product="p" @quickview="openQuickView" />
         </div>
       </div>
     </section>
@@ -103,7 +103,7 @@
           <RouterLink :to="`/products?category=${activeTab}`" class="view-all" style="margin-left:auto">Xem tất cả →</RouterLink>
         </div>
         <div class="products-grid">
-          <ProductCard v-for="p in tabProducts" :key="p.id" :product="p" />
+          <ProductCard v-for="p in tabProducts" :key="p.id" :product="p" @quickview="openQuickView" />
         </div>
       </div>
     </section>
@@ -141,14 +141,18 @@
       </div>
     </section>
   </div>
+  <QuickView :product="qvProduct" @close="qvProduct = null" />
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useProducts } from '@/composables/useProducts.js'
 import ProductCard from '@/components/ProductCard.vue'
+import QuickView from '@/components/QuickView.vue'
 
 const { products, loading, fetchProducts } = useProducts()
+const qvProduct = ref(null)
+function openQuickView(p) { qvProduct.value = p }
 onMounted(() => fetchProducts())
 
 // Slider
@@ -225,16 +229,16 @@ const benefits = [
 .hero-sub { font-size: 13px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; opacity: 0.8; margin-bottom: 16px; }
 .hero-content h1 { font-size: 48px; font-weight: 800; line-height: 1.15; margin-bottom: 16px; }
 .hero-desc { font-size: 15px; opacity: 0.85; margin-bottom: 28px; }
-.hero-dots { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: all 0.2s; }
-.dot.active { background: #fff; width: 24px; border-radius: 4px; }
+.hero-dots { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: all 0.25s; border: none; padding: 0; cursor: pointer; min-height: unset !important; flex-shrink: 0; }
+.dot.active { background: #fff; width: 22px; border-radius: 4px; }
 .hero-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); color: #fff; width: 44px; height: 44px; border-radius: 50%; font-size: 24px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
 .hero-arrow:hover { background: rgba(255,255,255,0.4); }
 .hero-arrow.prev { left: 20px; }
 .hero-arrow.next { right: 20px; }
 
 /* Flash sale */
-.flash-title { display: flex; align-items: center; gap: 12px; }
+.flash-title { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; white-space: nowrap; }
 .flash-icon { font-size: 20px; }
 .countdown { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; }
 .cd-block { background: var(--black); color: #fff; padding: 4px 8px; border-radius: 4px; min-width: 32px; text-align: center; }
@@ -295,10 +299,20 @@ const benefits = [
 }
 
 @media (max-width: 600px) {
-  .hero { height: 400px; }
-  .hero-content h1 { font-size: 26px; }
+  .hero { height: 320px; }
+  .hero-content h1 { font-size: 22px; }
+  .hero-desc { font-size: 13px; margin-bottom: 20px; }
+  .actions .btn-primary { padding: 10px 20px; font-size: 13px; }
+  .actions .btn-outline { display: none; }
   .cat-icon-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .collections-grid { grid-template-columns: 1fr; }
   .benefits-grid { grid-template-columns: 1fr; }
+  .loading-grid { grid-template-columns: repeat(2, 1fr); }
+  .section-header { flex-wrap: nowrap; gap: 8px; }
+  .section-title { font-size: 16px; }
+  .view-all { font-size: 12px; white-space: nowrap; }
+  .countdown { gap: 3px; }
+  .cd-block { min-width: 26px; font-size: 12px; padding: 3px 5px; }
+  .section { padding: 24px 0; }
 }
 </style>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 48">
+  <defs>
+    <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a1a"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon box -->
+  <rect x="0" y="4" width="40" height="40" rx="10" fill="url(#lg)"/>
+  <!-- SS in box -->
+  <text x="4" y="34" font-family="Georgia, serif" font-size="22" font-weight="700" fill="white" letter-spacing="-1">SS</text>
+
+  <!-- STYLESHOP text -->
+  <text x="50" y="22" font-family="'Inter', Arial, sans-serif" font-size="13" font-weight="800" fill="#1a1a1a" letter-spacing="3">STYLE</text>
+  <text x="50" y="38" font-family="'Inter', Arial, sans-serif" font-size="13" font-weight="400" fill="#3b82f6" letter-spacing="3">SHOP</text>
+
+  <!-- Dot accent -->
+  <circle cx="172" cy="36" r="3" fill="#3b82f6"/>
+</svg>

@@ -22,7 +22,9 @@
       <!-- Quick add overlay -->
       <Transition name="fade-up">
         <div v-if="hovered" class="quick-add">
-          <RouterLink :to="`/products/${product.id}`" class="quick-add-btn">Xem nhanh</RouterLink>
+          <button class="quick-view-btn" @click.stop="$emit('quickview', product)">
+            <i class="fas fa-eye"></i> Xem nhanh
+          </button>
         </div>
       </Transition>
     </div>
@@ -57,6 +59,7 @@ import { useToastStore } from '@/stores/toast.js'
 import { formatPrice, discountPercent } from '@/utils/format.js'
 
 const props = defineProps({ product: Object })
+const emit = defineEmits(['quickview'])
 const wishlist = useWishlistStore()
 const toast = useToastStore()
 const hovered = ref(false)
@@ -91,8 +94,8 @@ function toggleWish() {
 .wish-btn:hover { background: #fff; color: var(--red); }
 
 .quick-add { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px; }
-.quick-add-btn { display: block; text-align: center; background: rgba(255,255,255,0.95); color: var(--black); font-size: 12px; font-weight: 600; padding: 10px; border-radius: 4px; transition: background 0.2s; }
-.quick-add-btn:hover { background: #fff; }
+.quick-view-btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; background: #1a1a1a; color: #fff; font-size: 12px; font-weight: 600; padding: 11px; border-radius: 4px; border: none; cursor: pointer; transition: background 0.2s; }
+.quick-view-btn:hover { background: #333; }
 
 .card-body { padding: 10px 2px 0; display: flex; flex-direction: column; gap: 5px; }
 

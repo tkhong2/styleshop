@@ -80,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
 import { useWishlistStore } from '@/stores/wishlist.js'
@@ -93,6 +93,9 @@ const router = useRouter()
 const auth = useAuthStore()
 const wishlist = useWishlistStore()
 const toast = useToastStore()
+
+const ADMIN_EMAILS = ['khachong2102005@gmail.com']
+const isAdmin = computed(() => ADMIN_EMAILS.includes(auth.user?.email))
 
 if (!auth.isLoggedIn) router.push('/login')
 
@@ -140,6 +143,7 @@ function formatDate(d) {
 .pnav-btn { text-align: left; padding: 10px 12px; font-size: 14px; border-radius: 6px; transition: background 0.15s; color: var(--black); }
 .pnav-btn:hover, .pnav-btn.active { background: var(--gray); font-weight: 600; }
 .pnav-btn.logout { color: var(--red); margin-top: 8px; }
+.pnav-btn.admin-link { color: #3b82f6; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
 .profile-content { background: #fff; border: 1px solid var(--gray2); border-radius: 12px; padding: 32px; }
 .content-title { font-size: 20px; font-weight: 700; margin-bottom: 24px; }
 .empty-state { text-align: center; padding: 40px; color: var(--gray3); display: flex; flex-direction: column; align-items: center; gap: 16px; }

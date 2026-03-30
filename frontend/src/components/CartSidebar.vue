@@ -60,6 +60,10 @@ const cart = useCartStore()
 <style scoped>
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; justify-content: flex-end; }
 .sidebar { width: 400px; max-width: 100vw; background: #fff; height: 100%; display: flex; flex-direction: column; }
+@media (max-width: 480px) {
+  .sidebar { width: 100vw; }
+  .checkout-btn { padding: 16px; font-size: 15px; }
+}
 .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid #eee; }
 .header h2 { font-size: 18px; font-weight: 600; }
 .header button { background: none; color: #555; }

@@ -1,0 +1,1 @@
+import{a as e}from"./api-DQirqeQO.js";const o={getAll(t={}){return e.get("/products",{params:t})},getById(t){return e.get(`/products/${t}`)},getCategories(){return e.get("/categories")}};export{o as p};
