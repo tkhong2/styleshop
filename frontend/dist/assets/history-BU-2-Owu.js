@@ -1,1 +1,0 @@
-import{e as o,b as s}from"./index-FBBGAIaB.js";const l=o("history",()=>{const e=s(JSON.parse(localStorage.getItem("viewed")||"[]"));function i(t){e.value=[t,...e.value.filter(r=>r.id!==t.id)].slice(0,10),localStorage.setItem("viewed",JSON.stringify(e.value))}return{items:e,add:i}});export{l as u};

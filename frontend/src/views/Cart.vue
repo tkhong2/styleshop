@@ -108,7 +108,7 @@
             <div class="qr-wrap">
               <img :src="qrUrl" alt="QR Code thanh toán" class="qr-img" />
             </div>
-    <div class="bank-info">
+            <div class="bank-info">
               <div class="bank-row"><span>Ngân hàng</span><strong>BIDV</strong></div>
               <div class="bank-row"><span>Số tài khoản VA</span><strong class="copy-text" @click="copy('962471OMBS')">962471OMBS 📋</strong></div>
               <div class="bank-row"><span>Chủ tài khoản</span><strong>TRAN KHAC HONG</strong></div>
@@ -116,19 +116,13 @@
                 <strong class="copy-text" @click="copy(currentTransferNote)">{{ currentTransferNote }} 📋</strong>
               </div>
             </div>
-
-            <!-- Waiting state -->
-            <div v-if="waitingPayment" class="waiting-box">
+            <p class="qr-note">Quét mã QR bằng app ngân hàng bất kỳ hoặc MoMo, ZaloPay</p>
+            <!-- Auto polling — không cần bấm nút -->
+            <div class="waiting-box">
               <div class="waiting-spinner"></div>
               <p>Đang chờ xác nhận thanh toán...</p>
-              <p class="waiting-sub">Hệ thống tự động kiểm tra mỗi 5 giây</p>
+              <p class="waiting-sub">Hệ thống tự động xác nhận khi nhận được tiền</p>
               <div class="waiting-timer">⏱ {{ waitingSeconds }}s</div>
-            </div>
-            <div v-else>
-              <p class="qr-note">Quét mã QR bằng app ngân hàng bất kỳ hoặc MoMo, ZaloPay</p>
-              <button class="btn btn-dark confirm-btn" @click="startWaiting('bank_transfer')">
-                Tôi đã chuyển khoản — Chờ xác nhận
-              </button>
             </div>
           </div>
 
@@ -145,18 +139,12 @@
               <div class="bank-row"><span>Tên tài khoản</span><strong>TRAN KHAC HONG</strong></div>
               <div class="bank-row"><span>Nội dung</span><strong>{{ currentTransferNote }}</strong></div>
             </div>
-
-            <div v-if="waitingPayment" class="waiting-box momo-wait">
+            <p class="qr-note">Mở app MoMo → Quét mã QR hoặc chuyển tiền theo số điện thoại</p>
+            <div class="waiting-box momo-wait">
               <div class="waiting-spinner momo-spin"></div>
               <p>Đang chờ xác nhận từ MoMo...</p>
-              <p class="waiting-sub">Hệ thống tự động kiểm tra mỗi 5 giây</p>
+              <p class="waiting-sub">Hệ thống tự động xác nhận khi nhận được tiền</p>
               <div class="waiting-timer">⏱ {{ waitingSeconds }}s</div>
-            </div>
-            <div v-else>
-              <p class="qr-note">Mở app MoMo → Quét mã QR hoặc chuyển tiền theo số điện thoại</p>
-              <button class="btn btn-dark confirm-btn" style="background:#a50064" @click="startWaiting('momo')">
-                Tôi đã thanh toán — Chờ xác nhận
-              </button>
             </div>
           </div>
 
@@ -318,10 +306,9 @@ async function confirmPayment(method) {
   showSuccess.value = true
 }
 
-// Chọn phương thức → chỉ set payMethod, chưa tạo đơn
+// Chọn phương thức → tạo đơn + bắt đầu polling ngay
 async function selectMethod(method) {
   payMethod.value = method
-  // Tạo đơn với timestamp mới mỗi lần mở QR
   currentOrderId.value = null
   currentTransferNote.value = ''
   try {
@@ -337,41 +324,24 @@ async function selectMethod(method) {
   } catch {
     currentTransferNote.value = transferNote.value
   }
+  // Tự động bắt đầu polling ngay — không cần bấm nút
+  if (method === 'qr' || method === 'momo') {
+    startPolling()
+  }
 }
 
-// ── Bank/MoMo: bắt đầu polling sau khi user đã chuyển ────────────────────────
-async function startWaiting(method) {
-  // Đơn đã được tạo trong selectMethod, chỉ cần bắt đầu polling
-  if (!currentOrderId.value) {
-    // Fallback nếu chưa tạo
-    try {
-      const order = await orderService.create({
-        items: cart.items.map(i => ({ product_id: i.id, size: i.size, color: i.color, quantity: i.quantity })),
-        total: finalTotal.value,
-        coupon: coupon.value || null,
-        payment_method: method,
-        user_id: auth.user?.email || null,
-      })
-      currentOrderId.value = order.id
-      currentTransferNote.value = order.transfer_note || transferNote.value
-    } catch {
-      currentTransferNote.value = transferNote.value
-    }
-  }
-
+// ── Bắt đầu polling (gọi tự động sau khi tạo đơn) ───────────────────────────
+function startPolling() {
   waitingPayment.value = true
   waitingSeconds.value = 0
 
-  // Đếm giây
   secondTimer = setInterval(() => {
     waitingSeconds.value++
     if (waitingSeconds.value >= MAX_WAIT) cancelWaiting()
   }, 1000)
 
-  // Polling mỗi 5 giây
   pollTimer = setInterval(async () => {
     try {
-      // Check đơn hiện tại
       if (currentOrderId.value) {
         const res = await orderService.getPaymentStatus(currentOrderId.value)
         if (res.payment_status === 'paid') {
@@ -385,9 +355,8 @@ async function startWaiting(method) {
           return
         }
       }
-      // Fallback: check đơn hiện tại của user có paid không
+      // Fallback: check tất cả đơn của user
       const allOrders = await orderService.getMyOrders(auth.user?.email)
-      // Chỉ check đơn được tạo trong session này (currentOrderId)
       const paidOrder = allOrders.find(o =>
         o.id === currentOrderId.value && o.payment_status === 'paid'
       )
@@ -402,6 +371,7 @@ async function startWaiting(method) {
       }
     } catch (e) {
       if (e.message?.includes('404')) {
+        // Server restart — đơn mất, vẫn xác nhận
         stopPolling()
         orderId.value = currentOrderId.value || Math.floor(Math.random() * 90000 + 10000)
         cart.clearCart()
@@ -412,6 +382,9 @@ async function startWaiting(method) {
     }
   }, 5000)
 }
+
+// Legacy alias (giữ để không lỗi nếu còn ref)
+async function startWaiting(method) { startPolling() }
 
 function cancelWaiting() {
   stopPolling()
