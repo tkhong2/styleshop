@@ -78,15 +78,7 @@
               <div class="pay-icon bank-icon"><i class="fas fa-university"></i></div>
               <div>
                 <p class="pay-name">Chuyển khoản ngân hàng</p>
-                <p class="pay-desc">VietQR · Napas 247 · Tất cả ngân hàng</p>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-            <button class="pay-method-btn" @click="selectMethod('momo')">
-              <div class="pay-icon momo-icon"><i class="fas fa-wallet"></i></div>
-              <div>
-                <p class="pay-name">Ví MoMo</p>
-                <p class="pay-desc">Thanh toán qua ví điện tử MoMo</p>
+                <p class="pay-desc">BIDV · VietQR · Napas 247 · Tất cả ngân hàng</p>
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
@@ -489,13 +481,14 @@ onUnmounted(() => stopPolling())
 .pay-cod h3 { font-size: 17px; font-weight: 700; }
 .pay-cod > p { font-size: 14px; color: #555; }
 .cod-note { font-size: 12px; color: var(--gray3); background: var(--gray); padding: 10px 14px; border-radius: 8px; width: 100%; text-align: left; display: flex; align-items: center; gap: 6px; }
-.shipping-form { width: 100%; background: #f8fafc; border-radius: 10px; padding: 16px; text-align: left; }
+.shipping-form { width: 100%; background: #f8fafc; border-radius: 10px; padding: 16px; text-align: left; box-sizing: border-box; }
 .shipping-form h4 { font-size: 13px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; color: #1e293b; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.shipping-form .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.shipping-form .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; min-width: 0; }
 .shipping-form label { font-size: 12px; font-weight: 600; color: #475569; }
-.shipping-form input, .shipping-form textarea { padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: var(--font); outline: none; resize: none; }
+.shipping-form input, .shipping-form textarea { padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: var(--font); outline: none; resize: none; width: 100%; box-sizing: border-box; }
 .shipping-form input:focus, .shipping-form textarea:focus { border-color: var(--black); }
+@media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
 
 /* Success */
 .success-modal { padding: 48px 32px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
