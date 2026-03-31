@@ -20,6 +20,9 @@
         <option value="unisex">Unisex</option>
       </select>
       <span class="total-count">{{ filtered.length }} sản phẩm</span>
+      <RouterLink to="/admin/products/new" class="btn-add">
+        <i class="fas fa-plus"></i> Thêm sản phẩm
+      </RouterLink>
     </div>
 
     <div class="card">
@@ -34,6 +37,7 @@
             <th>Giá</th>
             <th>Đánh giá</th>
             <th>Tags</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -56,6 +60,11 @@
             <td>
               <span v-if="p.is_new" class="tag new">Mới</span>
               <span v-if="p.is_sale" class="tag sale">Sale</span>
+            </td>
+            <td>
+              <RouterLink :to="`/admin/products/${p.id}/edit`" class="act-edit">
+                <i class="fas fa-edit"></i>
+              </RouterLink>
             </td>
           </tr>
         </tbody>
@@ -129,6 +138,10 @@ function genderLabel(g) { return { nam: 'Nam', nu: 'Nữ', unisex: 'Unisex' }[g]
 .tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; margin-right: 4px; }
 .tag.new { background: #1e2139; color: #fff; }
 .tag.sale { background: #ef4444; color: #fff; }
+.act-edit { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 6px; color: #3b82f6; background: #eff6ff; font-size: 13px; }
+.act-edit:hover { background: #dbeafe; }
+.btn-add { display: flex; align-items: center; gap: 6px; padding: 9px 16px; background: #3b82f6; color: #fff; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; text-decoration: none; margin-left: auto; }
+.btn-add:hover { background: #2563eb; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 16px; font-size: 13px; color: #555; }
 .pagination button { padding: 6px 14px; border: 1.5px solid #eee; border-radius: 6px; background: #fff; font-size: 16px; }
 .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }

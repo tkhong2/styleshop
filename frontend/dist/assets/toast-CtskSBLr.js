@@ -1,0 +1,1 @@
+import{e as i,b as a}from"./index-FBBGAIaB.js";const v=i("toast",()=>{const e=a([]);let n=0;function o(s,t="success",u=3e3){const c={id:++n,message:s,type:t};e.value.push(c),setTimeout(()=>r(c.id),u)}function r(s){e.value=e.value.filter(t=>t.id!==s)}return{toasts:e,add:o,remove:r,success:s=>o(s,"success"),error:s=>o(s,"error"),info:s=>o(s,"info")}});export{v as u};

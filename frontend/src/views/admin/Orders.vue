@@ -73,6 +73,14 @@
             <td>
               <div class="actions">
                 <button v-if="order.payment_status === 'waiting'" class="act-btn confirm" @click="markPaid(order.id)" title="Xác nhận đã thanh toán"><i class="fas fa-check-circle"></i></button>
+                <select class="status-select" :value="order.status" @change="changeStatus(order.id, $event.target.value)">
+                  <option value="pending">Chờ xử lý</option>
+                  <option value="confirmed">Đã xác nhận</option>
+                  <option value="shipping">Đang giao</option>
+                  <option value="done">Hoàn thành</option>
+                  <option value="cancelled">Đã huỷ</option>
+                </select>
+                <button class="act-btn print" @click="printInvoice(order)" title="In hóa đơn"><i class="fas fa-print"></i></button>
                 <button class="act-btn delete" @click="deleteOrder(order.id)" title="Xoá"><i class="fas fa-trash"></i></button>
               </div>
             </td>
@@ -115,10 +123,45 @@ async function markPaid(id) {
   try {
     await api.patch(`/orders/${id}/mark-paid`)
     await load()
-  } catch { /* fallback: update local */ 
+    toast.success('Đã xác nhận thanh toán!')
+  } catch {
     const o = orders.value.find(x => x.id === id)
     if (o) { o.payment_status = 'paid'; o.status = 'confirmed' }
   }
+}
+
+async function changeStatus(id, status) {
+  try {
+    await api.patch(`/orders/${id}/status`, { status })
+    const o = orders.value.find(x => x.id === id)
+    if (o) o.status = status
+    toast.success('Đã cập nhật trạng thái!')
+  } catch { toast.error('Không thể cập nhật') }
+}
+
+function printInvoice(order) {
+  const win = window.open('', '_blank')
+  win.document.write(`
+    <html><head><title>Hóa đơn #${order.id}</title>
+    <style>body{font-family:Arial;padding:24px;max-width:600px;margin:0 auto}
+    h1{font-size:20px}table{width:100%;border-collapse:collapse}
+    td,th{padding:8px;border:1px solid #ddd;font-size:13px}
+    th{background:#f5f5f5}.total{font-size:16px;font-weight:bold}
+    @media print{.no-print{display:none}}</style></head>
+    <body>
+    <h1>🛍️ STYLESHOP — Hóa đơn #${order.id}</h1>
+    <p>Ngày: ${new Date(order.created_at).toLocaleString('vi-VN')}</p>
+    <p>Phương thức: ${order.payment_method?.toUpperCase()}</p>
+    <p>Trạng thái TT: ${order.payment_status === 'paid' ? '✅ Đã thanh toán' : '⏳ Chờ thanh toán'}</p>
+    <hr/>
+    <table><tr><th>Sản phẩm</th><th>Size</th><th>Màu</th><th>SL</th></tr>
+    ${order.items.map(i => `<tr><td>SP #${i.product_id}</td><td>${i.size}</td><td>${i.color}</td><td>${i.quantity}</td></tr>`).join('')}
+    </table>
+    <p class="total">Tổng cộng: ${order.total.toLocaleString('vi-VN')}đ</p>
+    <button class="no-print" onclick="window.print()">🖨️ In hóa đơn</button>
+    </body></html>
+  `)
+  win.document.close()
 }
 
 function deleteOrder(id) {
@@ -192,9 +235,13 @@ function statusLabel(s) { return { pending: 'Chờ xử lý', confirmed: 'Đã x
 .status-badge.waiting, .status-badge.pending, .status-badge.shipping { background: #fef3c7; color: #92400e; }
 .status-badge.unpaid, .status-badge.cancelled { background: #fee2e2; color: #991b1b; }
 
-.actions { display: flex; gap: 6px; }
-.act-btn { background: none; font-size: 16px; padding: 4px; border-radius: 4px; transition: background 0.15s; }
-.act-btn:hover { background: #f0f0f0; }
+.actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.act-btn { background: none; font-size: 14px; padding: 6px 8px; border-radius: 6px; transition: background 0.15s; }
+.act-btn.confirm { color: #10b981; } .act-btn.confirm:hover { background: #d1fae5; }
+.act-btn.print { color: #3b82f6; } .act-btn.print:hover { background: #eff6ff; }
+.act-btn.delete { color: #ef4444; } .act-btn.delete:hover { background: #fef2f2; }
+.status-select { padding: 5px 8px; border: 1.5px solid #e2e8f0; border-radius: 6px; font-size: 12px; background: #fff; outline: none; cursor: pointer; }
+.status-select:focus { border-color: #3b82f6; }
 
 .loading, .empty { text-align: center; padding: 40px; color: #888; }
 @media (max-width: 900px) { .summary-row { grid-template-columns: 1fr 1fr; } }

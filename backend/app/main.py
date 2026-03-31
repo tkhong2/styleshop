@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
-from app.routers import products, orders, categories
+from app.routers import products, orders, categories, reviews
 
 load_dotenv()
 
@@ -20,6 +20,7 @@ app.add_middleware(
 app.include_router(products.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
 app.include_router(categories.router, prefix="/api")
+app.include_router(reviews.router, prefix="/api")
 
 @app.get("/")
 def root():

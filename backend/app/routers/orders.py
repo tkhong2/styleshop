@@ -4,6 +4,7 @@ from typing import Optional
 import time
 from app.models.order import OrderCreate, Order
 from app.database import load_orders, save_order, update_order, next_id
+from app.email import send_order_confirmation
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -28,6 +29,12 @@ def create_order(payload: OrderCreate):
         "created_at": datetime.utcnow().isoformat(),
     }
     save_order(order_dict)
+
+    # Gửi email xác nhận
+    if payload.user_id and "@" in payload.user_id:
+        import threading
+        threading.Thread(target=send_order_confirmation, args=(order_dict, payload.user_id), daemon=True).start()
+
     return Order(**order_dict)
 
 # ── Polling ───────────────────────────────────────────────────────────────────
@@ -86,6 +93,21 @@ async def sepay_webhook(request: Request):
 @router.patch("/{order_id}/mark-paid")
 def mark_paid(order_id: int):
     updated = update_order(order_id, {"payment_status": "paid", "status": "confirmed"})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+    return {"success": True}
+
+# ── Admin: cập nhật trạng thái đơn hàng ──────────────────────────────────────
+@router.patch("/{order_id}/status")
+def update_status(order_id: int, payload: dict):
+    allowed = ["pending", "confirmed", "shipping", "done", "cancelled"]
+    new_status = payload.get("status")
+    if new_status not in allowed:
+        raise HTTPException(status_code=400, detail=f"Status phải là: {allowed}")
+    updated = update_order(order_id, {"status": new_status})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
+    return {"success": True, "status": new_status}
     if not updated:
         raise HTTPException(status_code=404, detail="Không tìm thấy đơn hàng")
     return {"success": True}

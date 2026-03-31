@@ -87,6 +87,9 @@
           <ProductCard v-for="p in relatedProducts" :key="p.id" :product="p" />
         </div>
       </div>
+
+      <!-- Reviews -->
+      <ReviewSection :product-id="product.id" />
     </template>
   </div>
 </template>
@@ -100,7 +103,9 @@ import { useWishlistStore } from '@/stores/wishlist.js'
 import { useToastStore } from '@/stores/toast.js'
 import { useHistoryStore } from '@/stores/history.js'
 import ProductCard from '@/components/ProductCard.vue'
+import ReviewSection from '@/components/ReviewSection.vue'
 import { formatPrice, discountPercent } from '@/utils/format.js'
+import { useSEO } from '@/composables/useSEO.js'
 
 const route = useRoute()
 const cart = useCartStore()
@@ -128,7 +133,17 @@ watch(() => route.params.id, (id) => {
 }, { immediate: true })
 
 // Lưu lịch sử xem
-watch(product, (p) => { if (p) history.add(p) })
+watch(product, (p) => {
+  if (p) {
+    history.add(p)
+    useSEO({
+      title: p.name,
+      description: p.description,
+      image: p.image,
+      url: window.location.href,
+    })
+  }
+})
 
 const relatedProducts = computed(() => {
   if (!product.value) return []

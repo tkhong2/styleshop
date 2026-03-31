@@ -46,7 +46,46 @@
           </div>
         </div>
 
-        <!-- Info -->
+        <!-- Address -->
+        <div v-if="activeTab === 'address'">
+          <h2 class="content-title">Địa chỉ giao hàng</h2>
+          <div class="address-list">
+            <div v-for="(addr, i) in addresses" :key="i" class="address-card" :class="{ default: addr.isDefault }">
+              <div class="addr-header">
+                <span class="addr-name">{{ addr.name }}</span>
+                <span v-if="addr.isDefault" class="default-badge">Mặc định</span>
+              </div>
+              <p class="addr-detail">{{ addr.phone }}</p>
+              <p class="addr-detail">{{ addr.address }}, {{ addr.district }}, {{ addr.city }}</p>
+              <div class="addr-actions">
+                <button class="addr-btn" @click="editAddress(i)"><i class="fas fa-edit"></i> Sửa</button>
+                <button v-if="!addr.isDefault" class="addr-btn" @click="setDefault(i)">Đặt mặc định</button>
+                <button class="addr-btn del" @click="removeAddress(i)"><i class="fas fa-trash"></i></button>
+              </div>
+            </div>
+            <button class="add-addr-btn" @click="showAddrForm = !showAddrForm">
+              <i class="fas fa-plus"></i> Thêm địa chỉ mới
+            </button>
+          </div>
+
+          <div v-if="showAddrForm" class="addr-form">
+            <h3>{{ editIdx >= 0 ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới' }}</h3>
+            <div class="form-row-2">
+              <div class="field"><label>Họ tên *</label><input v-model="addrForm.name" type="text" /></div>
+              <div class="field"><label>Số điện thoại *</label><input v-model="addrForm.phone" type="tel" /></div>
+            </div>
+            <div class="field"><label>Địa chỉ *</label><input v-model="addrForm.address" type="text" placeholder="Số nhà, tên đường" /></div>
+            <div class="form-row-2">
+              <div class="field"><label>Quận/Huyện</label><input v-model="addrForm.district" type="text" /></div>
+              <div class="field"><label>Tỉnh/Thành phố</label><input v-model="addrForm.city" type="text" /></div>
+            </div>
+            <label class="check-label"><input type="checkbox" v-model="addrForm.isDefault" /> Đặt làm địa chỉ mặc định</label>
+            <div class="addr-form-btns">
+              <button class="btn btn-dark" @click="saveAddress">Lưu địa chỉ</button>
+              <button class="btn btn-outline" @click="showAddrForm = false; editIdx = -1">Hủy</button>
+            </div>
+          </div>
+        </div>
         <div v-if="activeTab === 'info'">
           <h2 class="content-title">Thông tin tài khoản</h2>
           <form class="info-form" @submit.prevent="saveInfo">
@@ -102,12 +141,32 @@ if (!auth.isLoggedIn) router.push('/login')
 const activeTab = ref('orders')
 const orders = ref([])
 const tabs = [
-  { id: 'orders', label: 'Đơn hàng' },
-  { id: 'info', label: 'Thông tin' },
-  { id: 'wishlist', label: 'Yêu thích' },
+  { id: 'orders', label: '📦 Đơn hàng' },
+  { id: 'address', label: '📍 Địa chỉ' },
+  { id: 'info', label: '👤 Thông tin' },
+  { id: 'wishlist', label: '❤️ Yêu thích' },
 ]
 
 const infoForm = ref({ name: auth.user?.name || '', email: auth.user?.email || '', phone: '' })
+
+// Địa chỉ giao hàng
+const addresses = ref(JSON.parse(localStorage.getItem('addresses') || '[]'))
+const showAddrForm = ref(false)
+const editIdx = ref(-1)
+const addrForm = ref({ name: auth.user?.name || '', phone: '', address: '', district: '', city: '', isDefault: false })
+
+function saveAddress() {
+  if (!addrForm.value.name || !addrForm.value.phone || !addrForm.value.address) return
+  if (addrForm.value.isDefault) addresses.value.forEach(a => a.isDefault = false)
+  if (editIdx.value >= 0) addresses.value[editIdx.value] = { ...addrForm.value }
+  else addresses.value.push({ ...addrForm.value })
+  localStorage.setItem('addresses', JSON.stringify(addresses.value))
+  showAddrForm.value = false; editIdx.value = -1
+  addrForm.value = { name: auth.user?.name || '', phone: '', address: '', district: '', city: '', isDefault: false }
+}
+function editAddress(i) { editIdx.value = i; addrForm.value = { ...addresses.value[i] }; showAddrForm.value = true }
+function removeAddress(i) { addresses.value.splice(i, 1); localStorage.setItem('addresses', JSON.stringify(addresses.value)) }
+function setDefault(i) { addresses.value.forEach((a, idx) => a.isDefault = idx === i); localStorage.setItem('addresses', JSON.stringify(addresses.value)) }
 
 onMounted(async () => {
   try { orders.value = await orderService.getMyOrders(auth.user?.email) } catch {}
@@ -157,6 +216,24 @@ function formatDate(d) {
 .order-item-row { font-size: 13px; color: #555; margin-bottom: 4px; }
 .order-footer { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--gray2); font-size: 14px; }
 .info-form { display: flex; flex-direction: column; gap: 16px; max-width: 400px; }
+.address-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.address-card { border: 1.5px solid var(--gray2); border-radius: 10px; padding: 16px; }
+.address-card.default { border-color: #3b82f6; background: #f0f7ff; }
+.addr-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.addr-name { font-size: 14px; font-weight: 600; }
+.default-badge { background: #3b82f6; color: #fff; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+.addr-detail { font-size: 13px; color: #555; margin-bottom: 3px; }
+.addr-actions { display: flex; gap: 8px; margin-top: 10px; }
+.addr-btn { font-size: 12px; padding: 5px 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; color: #555; display: flex; align-items: center; gap: 4px; }
+.addr-btn:hover { background: #f8fafc; }
+.addr-btn.del { color: #ef4444; border-color: #fecaca; }
+.add-addr-btn { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border: 1.5px dashed #e2e8f0; border-radius: 10px; color: #3b82f6; font-size: 14px; font-weight: 500; background: none; width: 100%; justify-content: center; }
+.add-addr-btn:hover { background: #f0f7ff; }
+.addr-form { background: #f8fafc; border-radius: 10px; padding: 20px; margin-top: 8px; }
+.addr-form h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.check-label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; margin: 8px 0; }
+.addr-form-btns { display: flex; gap: 10px; margin-top: 14px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 13px; font-weight: 600; }
 .field input { padding: 11px 14px; border: 1.5px solid var(--gray2); border-radius: 6px; font-size: 14px; font-family: var(--font); }

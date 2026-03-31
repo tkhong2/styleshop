@@ -147,8 +147,11 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useProducts } from '@/composables/useProducts.js'
+import { useSEO } from '@/composables/useSEO.js'
 import ProductCard from '@/components/ProductCard.vue'
 import QuickView from '@/components/QuickView.vue'
+
+useSEO({ title: 'Trang chủ', description: 'Khám phá hàng trăm mẫu thời trang chất lượng cao tại StyleShop.' })
 
 const { products, loading, fetchProducts } = useProducts()
 const qvProduct = ref(null)
