@@ -1,5 +1,8 @@
 <template>
   <div class="auth-page">
+    <RouterLink to="/" class="back-home">
+      <i class="fas fa-arrow-left"></i> Về trang chủ
+    </RouterLink>
     <div class="auth-card">
       <RouterLink to="/" class="auth-logo">STYLESHOP</RouterLink>
 
@@ -172,6 +175,8 @@ async function handleRegister() {
 
 <style scoped>
 .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--gray); padding: 20px; }
+.back-home { position: fixed; top: 20px; left: 20px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #555; background: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.2s; text-decoration: none; }
+.back-home:hover { color: #1a1a1a; box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateX(-2px); }
 .auth-card { background: #fff; border-radius: 16px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 4px 32px rgba(0,0,0,0.08); }
 .auth-logo { display: block; text-align: center; font-size: 22px; font-weight: 800; letter-spacing: 2px; margin-bottom: 28px; }
 

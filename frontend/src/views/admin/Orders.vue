@@ -72,7 +72,7 @@
             <td><span :class="['status-badge', order.status]">{{ statusLabel(order.status) }}</span></td>
             <td>
               <div class="actions">
-                <button v-if="order.payment_status === 'waiting'" class="act-btn confirm" @click="markPaid(order.id)" title="Xác nhận đã thanh toán"><i class="fas fa-check-circle"></i></button>
+                <button v-if="order.payment_status === 'waiting' || order.payment_status === 'cod_pending'" class="act-btn confirm" @click="markPaid(order.id)" title="Xác nhận đã thanh toán"><i class="fas fa-check-circle"></i></button>
                 <select class="status-select" :value="order.status" @change="changeStatus(order.id, $event.target.value)">
                   <option value="pending">Chờ xử lý</option>
                   <option value="confirmed">Đã xác nhận</option>
@@ -152,7 +152,7 @@ function printInvoice(order) {
     <h1>🛍️ STYLESHOP — Hóa đơn #${order.id}</h1>
     <p>Ngày: ${new Date(order.created_at).toLocaleString('vi-VN')}</p>
     <p>Phương thức: ${order.payment_method?.toUpperCase()}</p>
-    <p>Trạng thái TT: ${order.payment_status === 'paid' ? '✅ Đã thanh toán' : '⏳ Chờ thanh toán'}</p>
+    <p>Trạng thái TT: ${order.payment_status === 'paid' ? '✅ Đã thanh toán' : order.payment_status === 'cod_pending' ? '🚚 COD - Thanh toán khi nhận hàng' : '⏳ Chờ thanh toán'}</p>
     <hr/>
     <table><tr><th>Sản phẩm</th><th>Size</th><th>Màu</th><th>SL</th></tr>
     ${order.items.map(i => `<tr><td>SP #${i.product_id}</td><td>${i.size}</td><td>${i.color}</td><td>${i.quantity}</td></tr>`).join('')}
@@ -188,7 +188,7 @@ function exportCSV() {
 
 function formatDate(d) { return d ? new Date(d).toLocaleString('vi-VN') : '' }
 function methodLabel(m) { return { bank_transfer: 'CK Ngân hàng', momo: 'MoMo', cod: 'COD' }[m] || m }
-function payLabel(s) { return { paid: 'Đã TT', waiting: 'Chờ TT', unpaid: 'Chưa TT' }[s] || s }
+function payLabel(s) { return { paid: 'Đã TT', waiting: 'Chờ TT', unpaid: 'Chưa TT', cod_pending: 'COD - Chưa TT' }[s] || s }
 function statusLabel(s) { return { pending: 'Chờ xử lý', confirmed: 'Đã xác nhận', shipping: 'Đang giao', done: 'Hoàn thành', cancelled: 'Đã huỷ' }[s] || s }
 </script>
 
@@ -232,7 +232,7 @@ function statusLabel(s) { return { pending: 'Chờ xử lý', confirmed: 'Đã x
 
 .status-badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
 .status-badge.paid, .status-badge.confirmed, .status-badge.done { background: #d1fae5; color: #065f46; }
-.status-badge.waiting, .status-badge.pending, .status-badge.shipping { background: #fef3c7; color: #92400e; }
+.status-badge.waiting, .status-badge.pending, .status-badge.shipping, .status-badge.cod_pending { background: #fef3c7; color: #92400e; }
 .status-badge.unpaid, .status-badge.cancelled { background: #fee2e2; color: #991b1b; }
 
 .actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }

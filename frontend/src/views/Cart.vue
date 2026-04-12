@@ -82,7 +82,7 @@
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
-            <button class="pay-method-btn" @click="payMethod = 'cod'">
+            <button class="pay-method-btn" @click="selectCOD">
               <div class="pay-icon cod-icon"><i class="fas fa-hand-holding-usd"></i></div>
               <div>
                 <p class="pay-name">Thanh toán khi nhận hàng (COD)</p>
@@ -92,8 +92,75 @@
             </button>
           </div>
 
-          <!-- QR Bank Transfer -->
-          <div v-else-if="payMethod === 'qr'" class="pay-qr">
+          <!-- QR: Bước 1 - Nhập địa chỉ -->
+          <div v-else-if="payMethod === 'qr' && !qrReady" class="pay-cod">
+            <button class="back-btn" @click="payMethod = null">← Quay lại</button>
+            <div class="shipping-form" style="width:100%">
+              <h4><i class="fas fa-map-marker-alt"></i> Thông tin giao hàng</h4>
+
+              <!-- Địa chỉ đã lưu -->
+              <div v-if="savedAddresses.length > 0" class="saved-addresses">
+                <div
+                  v-for="(addr, i) in savedAddresses" :key="i"
+                  :class="['saved-addr-item', { selected: selectedAddrIdx === i }]"
+                  @click="selectSavedAddress(i)"
+                >
+                  <div class="saved-addr-radio">
+                    <span class="radio-dot" :class="{ active: selectedAddrIdx === i }"></span>
+                  </div>
+                  <div>
+                    <p class="saved-addr-name">{{ addr.name }} · {{ addr.phone }}
+                      <span v-if="addr.isDefault" class="default-badge">Mặc định</span>
+                    </p>
+                    <p class="saved-addr-detail">{{ addr.address }}, {{ addr.district }}, {{ addr.city }}</p>
+                  </div>
+                </div>
+                <button class="add-new-addr-btn" @click="selectedAddrIdx = -1">
+                  <i class="fas fa-plus"></i> Dùng địa chỉ khác
+                </button>
+              </div>
+
+              <!-- Form nhập mới khi chưa có hoặc chọn "dùng địa chỉ khác" -->
+              <div v-if="savedAddresses.length === 0 || selectedAddrIdx === -1">
+                <div class="form-row">
+                  <div class="field">
+                    <label>Họ tên *</label>
+                    <input v-model="shipping.name" type="text" placeholder="Nguyễn Văn A" />
+                  </div>
+                  <div class="field">
+                    <label>Số điện thoại *</label>
+                    <input v-model="shipping.phone" type="tel" placeholder="0912 345 678" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Địa chỉ *</label>
+                  <input v-model="shipping.address" type="text" placeholder="Số nhà, tên đường" />
+                </div>
+                <div class="form-row">
+                  <div class="field">
+                    <label>Quận/Huyện</label>
+                    <input v-model="shipping.district" type="text" placeholder="Quận 1" />
+                  </div>
+                  <div class="field">
+                    <label>Tỉnh/Thành phố</label>
+                    <input v-model="shipping.city" type="text" placeholder="TP. Hồ Chí Minh" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Ghi chú</label>
+                  <textarea v-model="shipping.note" placeholder="Ghi chú cho shipper..." rows="2"></textarea>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-dark confirm-btn"
+              :disabled="selectedAddrIdx === -1 ? (!shipping.name || !shipping.phone || !shipping.address) : false"
+              @click="proceedToQR">
+              Tiếp tục thanh toán →
+            </button>
+          </div>
+
+          <!-- QR: Bước 2 - Hiện QR -->
+          <div v-else-if="payMethod === 'qr' && qrReady" class="pay-qr">
             <button class="back-btn" @click="cancelWaiting">← Quay lại</button>
             <p class="pay-amount-label">Số tiền cần chuyển</p>
             <p class="pay-amount">{{ formatPrice(finalTotal) }}</p>
@@ -109,7 +176,6 @@
               </div>
             </div>
             <p class="qr-note">Quét mã QR bằng app ngân hàng bất kỳ hoặc MoMo, ZaloPay</p>
-            <!-- Auto polling — không cần bấm nút -->
             <div class="waiting-box">
               <div class="waiting-spinner"></div>
               <p>Đang chờ xác nhận thanh toán...</p>
@@ -147,42 +213,68 @@
             <h3>Thanh toán khi nhận hàng</h3>
             <p>Bạn sẽ thanh toán <strong>{{ formatPrice(finalTotal) }}</strong> khi nhận được hàng.</p>
 
-            <!-- Shipping form -->
             <div class="shipping-form">
               <h4><i class="fas fa-map-marker-alt"></i> Thông tin giao hàng</h4>
-              <div class="form-row">
-                <div class="field">
-                  <label>Họ tên *</label>
-                  <input v-model="shipping.name" type="text" placeholder="Nguyễn Văn A" required />
+
+              <!-- Địa chỉ đã lưu -->
+              <div v-if="savedAddresses.length > 0" class="saved-addresses">
+                <div
+                  v-for="(addr, i) in savedAddresses" :key="i"
+                  :class="['saved-addr-item', { selected: selectedAddrIdx === i }]"
+                  @click="selectSavedAddress(i)"
+                >
+                  <div class="saved-addr-radio">
+                    <span class="radio-dot" :class="{ active: selectedAddrIdx === i }"></span>
+                  </div>
+                  <div>
+                    <p class="saved-addr-name">{{ addr.name }} · {{ addr.phone }}
+                      <span v-if="addr.isDefault" class="default-badge">Mặc định</span>
+                    </p>
+                    <p class="saved-addr-detail">{{ addr.address }}, {{ addr.district }}, {{ addr.city }}</p>
+                  </div>
                 </div>
-                <div class="field">
-                  <label>Số điện thoại *</label>
-                  <input v-model="shipping.phone" type="tel" placeholder="0912 345 678" required />
-                </div>
+                <button class="add-new-addr-btn" @click="selectedAddrIdx = -1">
+                  <i class="fas fa-plus"></i> Dùng địa chỉ khác
+                </button>
               </div>
-              <div class="field">
-                <label>Địa chỉ *</label>
-                <input v-model="shipping.address" type="text" placeholder="Số nhà, tên đường" required />
-              </div>
-              <div class="form-row">
-                <div class="field">
-                  <label>Quận/Huyện</label>
-                  <input v-model="shipping.district" type="text" placeholder="Quận 1" />
+
+              <!-- Form nhập mới -->
+              <div v-if="savedAddresses.length === 0 || selectedAddrIdx === -1">
+                <div class="form-row">
+                  <div class="field">
+                    <label>Họ tên *</label>
+                    <input v-model="shipping.name" type="text" placeholder="Nguyễn Văn A" />
+                  </div>
+                  <div class="field">
+                    <label>Số điện thoại *</label>
+                    <input v-model="shipping.phone" type="tel" placeholder="0912 345 678" />
+                  </div>
                 </div>
                 <div class="field">
-                  <label>Tỉnh/Thành phố</label>
-                  <input v-model="shipping.city" type="text" placeholder="TP. Hồ Chí Minh" />
+                  <label>Địa chỉ *</label>
+                  <input v-model="shipping.address" type="text" placeholder="Số nhà, tên đường" />
                 </div>
-              </div>
-              <div class="field">
-                <label>Ghi chú</label>
-                <textarea v-model="shipping.note" placeholder="Ghi chú cho shipper..." rows="2"></textarea>
+                <div class="form-row">
+                  <div class="field">
+                    <label>Quận/Huyện</label>
+                    <input v-model="shipping.district" type="text" placeholder="Quận 1" />
+                  </div>
+                  <div class="field">
+                    <label>Tỉnh/Thành phố</label>
+                    <input v-model="shipping.city" type="text" placeholder="TP. Hồ Chí Minh" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Ghi chú</label>
+                  <textarea v-model="shipping.note" placeholder="Ghi chú cho shipper..." rows="2"></textarea>
+                </div>
               </div>
             </div>
 
             <p class="cod-note"><i class="fas fa-info-circle"></i> Shipper sẽ liên hệ trước khi giao. Vui lòng chuẩn bị đúng số tiền.</p>
-            <button class="btn btn-dark confirm-btn" @click="confirmPayment('cod')"
-              :disabled="!shipping.name || !shipping.phone || !shipping.address">
+            <button class="btn btn-dark confirm-btn"
+              :disabled="selectedAddrIdx === -1 ? (!shipping.name || !shipping.phone || !shipping.address) : false"
+              @click="confirmPayment('cod')">
               Xác nhận đặt hàng COD
             </button>
           </div>
@@ -234,11 +326,22 @@ const shipping = ref({
   note: '',
 })
 
+// Địa chỉ đã lưu từ profile
+const savedAddresses = ref(JSON.parse(localStorage.getItem('addresses') || '[]'))
+const selectedAddrIdx = ref(-2) // -2: chưa init, -1: nhập mới, >=0: chọn từ danh sách
+
+function selectSavedAddress(i) {
+  selectedAddrIdx.value = i
+  const addr = savedAddresses.value[i]
+  shipping.value = { name: addr.name, phone: addr.phone, address: addr.address, district: addr.district || '', city: addr.city || '', note: '' }
+}
+
 // Polling state
 const waitingPayment = ref(false)
 const waitingSeconds = ref(0)
 const currentOrderId = ref(null)
 const currentTransferNote = ref('')
+const qrReady = ref(false)
 let pollTimer = null
 let secondTimer = null
 const MAX_WAIT = 300 // 5 phút
@@ -278,10 +381,18 @@ function copy(text) {
 }
 
 // ── COD: xác nhận ngay ───────────────────────────────────────────────────────
+function selectCOD() {
+  payMethod.value = 'cod'
+  savedAddresses.value = JSON.parse(localStorage.getItem('addresses') || '[]')
+  const defaultIdx = savedAddresses.value.findIndex(a => a.isDefault)
+  if (defaultIdx >= 0) selectSavedAddress(defaultIdx)
+  else if (savedAddresses.value.length > 0) selectSavedAddress(0)
+  else selectedAddrIdx.value = -1
+}
 async function confirmPayment(method) {
   try {
     const order = await orderService.create({
-      items: cart.items.map(i => ({ product_id: i.id, size: i.size, color: i.color, quantity: i.quantity })),
+      items: cart.items.map(i => ({ product_id: i.id, name: i.name, price: i.price, size: i.size, color: i.color, quantity: i.quantity })),
       total: finalTotal.value,
       coupon: coupon.value || null,
       payment_method: method,
@@ -298,28 +409,40 @@ async function confirmPayment(method) {
   showSuccess.value = true
 }
 
-// Chọn phương thức → tạo đơn + bắt đầu polling ngay
+// Chọn phương thức → chỉ set payMethod, chưa tạo đơn
 async function selectMethod(method) {
   payMethod.value = method
+  qrReady.value = false
   currentOrderId.value = null
   currentTransferNote.value = ''
+  // Tự động chọn địa chỉ mặc định nếu có
+  if (method === 'qr') {
+    savedAddresses.value = JSON.parse(localStorage.getItem('addresses') || '[]')
+    const defaultIdx = savedAddresses.value.findIndex(a => a.isDefault)
+    if (defaultIdx >= 0) selectSavedAddress(defaultIdx)
+    else if (savedAddresses.value.length > 0) selectSavedAddress(0)
+    else selectedAddrIdx.value = -1
+  }
+}
+
+// Sau khi nhập địa chỉ → tạo đơn + hiện QR
+async function proceedToQR() {
   try {
     const order = await orderService.create({
-      items: cart.items.map(i => ({ product_id: i.id, size: i.size, color: i.color, quantity: i.quantity })),
+      items: cart.items.map(i => ({ product_id: i.id, name: i.name, price: i.price, size: i.size, color: i.color, quantity: i.quantity })),
       total: finalTotal.value,
       coupon: coupon.value || null,
-      payment_method: method,
+      payment_method: 'qr',
       user_id: auth.user?.email || null,
+      shipping: { ...shipping.value },
     })
     currentOrderId.value = order.id
     currentTransferNote.value = order.transfer_note || transferNote.value
   } catch {
     currentTransferNote.value = transferNote.value
   }
-  // Tự động bắt đầu polling ngay — không cần bấm nút
-  if (method === 'qr' || method === 'momo') {
-    startPolling()
-  }
+  qrReady.value = true
+  startPolling()
 }
 
 // ── Bắt đầu polling (gọi tự động sau khi tạo đơn) ───────────────────────────
@@ -381,6 +504,7 @@ async function startWaiting(method) { startPolling() }
 function cancelWaiting() {
   stopPolling()
   payMethod.value = null
+  qrReady.value = false
   currentOrderId.value = null
   currentTransferNote.value = ''
 }
@@ -509,6 +633,18 @@ onUnmounted(() => stopPolling())
 .waiting-box.momo-wait p { color: #a50064; }
 .waiting-sub { font-size: 12px !important; font-weight: 400 !important; color: #64748b !important; }
 .waiting-timer { font-size: 13px; color: #94a3b8; font-variant-numeric: tabular-nums; }
+.saved-addresses { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.saved-addr-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; cursor: pointer; transition: border-color 0.15s; }
+.saved-addr-item.selected { border-color: #1a1a1a; background: #f8fafc; }
+.saved-addr-radio { padding-top: 2px; }
+.radio-dot { display: block; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #cbd5e1; flex-shrink: 0; }
+.radio-dot.active { border-color: #1a1a1a; background: #1a1a1a; box-shadow: inset 0 0 0 3px #fff; }
+.saved-addr-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+.saved-addr-detail { font-size: 12px; color: #666; }
+.default-badge { background: #3b82f6; color: #fff; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px; }
+.add-new-addr-btn { display: flex; align-items: center; gap: 6px; padding: 10px 14px; border: 1.5px dashed #e2e8f0; border-radius: 8px; color: #3b82f6; font-size: 13px; background: none; width: 100%; justify-content: center; }
+.add-new-addr-btn:hover { background: #f0f7ff; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }

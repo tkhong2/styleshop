@@ -12,7 +12,7 @@
         </div>
         <nav class="profile-nav">
           <button v-for="tab in tabs" :key="tab.id" :class="['pnav-btn', { active: activeTab === tab.id }]" @click="activeTab = tab.id">
-            {{ tab.label }}
+            <i :class="['fas', tab.icon]"></i> {{ tab.label }}
           </button>
           <button class="pnav-btn logout" @click="handleLogout">Đăng xuất</button>
         </nav>
@@ -141,10 +141,10 @@ if (!auth.isLoggedIn) router.push('/login')
 const activeTab = ref('orders')
 const orders = ref([])
 const tabs = [
-  { id: 'orders', label: '📦 Đơn hàng' },
-  { id: 'address', label: '📍 Địa chỉ' },
-  { id: 'info', label: '👤 Thông tin' },
-  { id: 'wishlist', label: '❤️ Yêu thích' },
+  { id: 'orders', label: 'Đơn hàng', icon: 'fa-box' },
+  { id: 'address', label: 'Địa chỉ', icon: 'fa-map-marker-alt' },
+  { id: 'info', label: 'Thông tin', icon: 'fa-user' },
+  { id: 'wishlist', label: 'Yêu thích', icon: 'fa-heart' },
 ]
 
 const infoForm = ref({ name: auth.user?.name || '', email: auth.user?.email || '', phone: '' })

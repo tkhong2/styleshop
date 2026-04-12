@@ -4,7 +4,7 @@ from typing import Optional
 import time
 from app.models.order import OrderCreate, Order
 from app.database import load_orders, save_order, update_order, next_id
-from app.email import send_order_confirmation
+from app.email import send_order_confirmation, send_admin_notification
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -13,8 +13,8 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 def create_order(payload: OrderCreate):
     order_id = next_id()
     transfer_note = f"STYLE{int(time.time()) % 1000000:06d}"
-    payment_status = "paid" if payload.payment_method == "cod" else "waiting"
-    status = "confirmed" if payload.payment_method == "cod" else "pending"
+    payment_status = "cod_pending" if payload.payment_method == "cod" else "waiting"
+    status = "pending"
 
     order_dict = {
         "id": order_id,
@@ -26,14 +26,19 @@ def create_order(payload: OrderCreate):
         "payment_status": payment_status,
         "transfer_note": transfer_note,
         "user_id": payload.user_id,
+        "shipping": payload.shipping,
         "created_at": datetime.utcnow().isoformat(),
     }
     save_order(order_dict)
 
-    # Gửi email xác nhận
+    # Gửi email xác nhận cho khách
     if payload.user_id and "@" in payload.user_id:
         import threading
         threading.Thread(target=send_order_confirmation, args=(order_dict, payload.user_id), daemon=True).start()
+
+    # Gửi thông báo đến admin
+    import threading
+    threading.Thread(target=send_admin_notification, args=(order_dict,), daemon=True).start()
 
     return Order(**order_dict)
 

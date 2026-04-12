@@ -2,10 +2,10 @@
   <div class="admin-wrap">
     <aside :class="['sidebar', { collapsed }]">
       <div class="sidebar-logo">
-        <div class="logo-icon"><i class="fas fa-store"></i></div>
+        <div v-if="!collapsed" class="logo-icon"><i class="fas fa-store"></i></div>
         <span v-if="!collapsed" class="logo-text">StyleShop</span>
-        <button class="collapse-btn" @click="collapsed = !collapsed">
-          <i :class="collapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left'"></i>
+        <button class="collapse-btn" @click="collapsed = !collapsed" :title="collapsed ? 'Mở menu' : 'Thu gọn'">
+          <i :class="collapsed ? 'fas fa-bars' : 'fas fa-chevron-left'"></i>
         </button>
       </div>
 
@@ -24,10 +24,6 @@
       </nav>
 
       <div class="sidebar-footer">
-        <button class="nav-item logout-btn" @click="handleLogout" title="Đăng xuất">
-          <i class="nav-icon fas fa-sign-out-alt"></i>
-          <span v-if="!collapsed" class="nav-label">Đăng xuất</span>
-        </button>
       </div>
     </aside>
 
@@ -238,10 +234,12 @@ const currentTitle = computed(() => titleMap[route.path] || 'Admin')
 .sidebar { width: 240px; background: #1e293b; color: #fff; display: flex; flex-direction: column; transition: width 0.25s; flex-shrink: 0; }
 .sidebar.collapsed { width: 64px; }
 .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.sidebar.collapsed .sidebar-logo { justify-content: center; padding: 18px 8px; }
 .logo-icon { width: 34px; height: 34px; background: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
 .logo-text { font-size: 16px; font-weight: 700; flex: 1; }
-.collapse-btn { background: none; color: rgba(255,255,255,0.4); padding: 4px 6px; margin-left: auto; font-size: 12px; }
-.collapse-btn:hover { color: #fff; }
+.collapse-btn { background: none; color: rgba(255,255,255,0.4); padding: 4px 6px; margin-left: auto; font-size: 14px; border-radius: 6px; transition: all 0.15s; }
+.sidebar.collapsed .collapse-btn { margin-left: 0; }
+.collapse-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
 .sidebar-nav { flex: 1; padding: 16px 8px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
 .nav-group-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: rgba(255,255,255,0.3); padding: 8px 10px 4px; }
 .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500; transition: all 0.15s; text-decoration: none; }
